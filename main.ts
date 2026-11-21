@@ -52,3 +52,19 @@ if (ENTRY_TEXT.trim().length === 0) {
 mkdirSync("/output", { recursive: true });
 writeFileSync("/output/entry.txt", ENTRY_TEXT, "utf8");
 chmodSync("/output/entry.txt", 0o644);
+
+// Verify-after-write: read the file back and confirm it is byte-identical
+// to what we just wrote, and that its length is still inside the gate.
+// A disk write that silently truncated or corrupted the entry should fail
+// loudly here instead of shipping a broken file to the judge.
+import { readFileSync } from "node:fs";
+const writtenBack = readFileSync("/output/entry.txt", "utf8");
+if (writtenBack !== ENTRY_TEXT) {
+  throw new Error("verify-after-write failed: /output/entry.txt differs from ENTRY_TEXT");
+}
+const writtenBackLength = [...writtenBack].length;
+if (writtenBackLength < 1 || writtenBackLength > 280) {
+  throw new Error(
+    `verify-after-write failed: file is ${writtenBackLength} code points; must be 1-280`,
+  );
+}
